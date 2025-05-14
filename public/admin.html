@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 페이지 - 카드 리스트</title>
+  <style>
+    body { font-family: sans-serif; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    img { max-width: 100px; }
+  </style>
+</head>
+<body>
+  <h1>🛡️ 사용자 카드 목록</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>이미지</th>
+        <th>전화번호</th>
+        <th>수비력</th>
+        <th>SMS 전송</th>
+      </tr>
+    </thead>
+    <tbody id="dataTable"></tbody>
+  </table>
+
+  <script>
+    async function loadSubmissions() {
+      const res = await fetch('/submissions');
+      const data = await res.json();
+      const image_base_url = "http://localhost:3000"
+
+      const table = document.getElementById('dataTable');
+      table.innerHTML = '';
+      data.forEach(entry => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><img src="${image_base_url}/${entry.image_url}" alt="카드" /></td>
+          <td>${entry.phone}</td>
+          <td>${entry.defense}</td>
+          <td><button onclick="sendSMS('${entry.phone}')">전송</button></td>
+        `;
+        table.appendChild(row);
+      });
+    }
+
+    async function sendSMS(phone) {
+      const msg = prompt(`${phone} 번에게 보낼 메시지 입력:`);
+      if (!msg) return;
+
+      const res = await fetch('http://localhost:3000/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: phone, msg })
+      });
+
+      const result = await res.json();
+      if (result.success) alert('✅ 전송 성공');
+      else alert('❌ 전송 실패');
+    }
+
+    window.onload = loadSubmissions;
+  </script>
+</body>
+</html>

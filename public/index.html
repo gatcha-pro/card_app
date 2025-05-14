@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>사진 카드 등록</title>
+</head>
+<body>
+  <h1>사진과 전화번호를 입력하세요</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="photo" id="photoInput" accept="image/*" required /><br>
+    <img id="preview" style="display:none; max-width:200px;" /><br>
+    <input type="tel" name="phone" id="phoneInput" placeholder="전화번호 입력" required /><br>
+    <button type="submit">등록</button>
+  </form>
+
+  <script>
+    const photoInput = document.getElementById('photoInput');
+    const preview = document.getElementById('preview');
+    const uploadForm = document.getElementById('uploadForm');
+
+    photoInput.addEventListener('change', () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(uploadForm);
+
+      const res = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        alert(`등록 완료! 수비력: ${result.defense}`);
+        photoInput.value = "";
+        phoneInput.value = "";
+        preview.src = "";
+        preview.style.display = "none";
+      } else {
+        alert('업로드 실패: ' + result.error);
+      }
+    });
+  </script>
+</body>
+</html>
