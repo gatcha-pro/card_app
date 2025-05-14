@@ -9,6 +9,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
     img { max-width: 100px; }
+    button { margin: 2px; padding: 5px 10px; }
   </style>
 </head>
 <body>
@@ -22,7 +23,7 @@
         <th>이미지</th>
         <th>전화번호</th>
         <th>수비력</th>
-        <th>SMS 전송</th>
+        <th>관리</th>
       </tr>
     </thead>
     <tbody id="dataTable"></tbody>
@@ -52,24 +53,12 @@
           <td><img src="/${entry.image_url}" alt="카드" /></td>
           <td>${entry.phone}</td>
           <td>${entry.defense ?? 'null'}</td>
-          <td><button onclick="sendSMS('${entry.phone}')">전송</button></td>
+          <td>
+            <button onclick="sendSMS('${entry.phone}')">전송</button>
+            <button onclick="deleteEntry(${entry.defense})">삭제</button>
+          </td>
         `;
         table.appendChild(row);
-      });
-    }
-
-    function setupSearch() {
-      const searchInput = document.getElementById('searchInput');
-      searchInput.addEventListener('input', () => {
-        const keyword = searchInput.value.trim();
-        if (keyword === '') {
-          renderTable(allData);
-        } else {
-          const filtered = allData.filter(entry =>
-            entry.defense?.toString().includes(keyword)
-          );
-          renderTable(filtered);
-        }
       });
     }
 
@@ -93,10 +82,37 @@
       }
     }
 
-    window.onload = () => {
-      loadSubmissions();
-      setupSearch();
-    };
+    async function deleteEntry(defense) {
+      if (!confirm(`${defense}번 카드를 삭제할까요?`)) return;
+
+      try {
+        const res = await fetch(`/submissions/${defense}`, {
+          method: 'DELETE'
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert('✅ 삭제 완료');
+          loadSubmissions();
+        } else {
+          alert('❌ 삭제 실패');
+        }
+      } catch (err) {
+        alert('삭제 요청 실패');
+        console.error(err);
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const keyword = e.target.value.trim();
+      const filtered = keyword === ''
+        ? allData
+        : allData.filter(entry =>
+            entry.defense?.toString().includes(keyword)
+          );
+      renderTable(filtered);
+    });
+
+    window.onload = loadSubmissions;
   </script>
 </body>
 </html>

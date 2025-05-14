@@ -149,6 +149,24 @@ app.get('/', (req, res) => {
 app.get('/admin.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin.html'));
 });
+// ✅ 카드 삭제 API (defense 기준)
+app.delete('/submissions/:defense', async (req, res) => {
+    const defense = parseInt(req.params.defense, 10);
+  
+    try {
+      const { error } = await supabase
+        .from('submissions')
+        .delete()
+        .eq('defense', defense);
+  
+      if (error) throw error;
+  
+      res.json({ success: true });
+    } catch (err) {
+      console.error('❌ 삭제 실패:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
 
 // ✅ 서버 시작
 app.listen(PORT, () => {
