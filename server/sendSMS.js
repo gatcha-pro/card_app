@@ -1,11 +1,11 @@
-const { MessageService } = require('solapi');
+import { MessageService } from 'solapi';
 
 const messageService = new MessageService(
   process.env.SOLAPI_KEY,
   process.env.SOLAPI_SECRET
 );
 
-async function sendSMS(to, msg) {
+export async function sendSMS(to, msg) {
   try {
     const res = await messageService.send({
       to,
@@ -20,5 +20,3 @@ async function sendSMS(to, msg) {
     return { success: false, error: err.response?.data || err.message };
   }
 }
-
-module.exports = { sendSMS };
