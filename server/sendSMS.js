@@ -1,3 +1,4 @@
+import axios from 'axios';
 export async function sendSMS(to, msg) {
   try {
     const res = await axios.post('https://api.solapi.com/messages/v4/send', {
