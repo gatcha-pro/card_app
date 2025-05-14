@@ -1,6 +1,6 @@
-const { SolapiMessageService } = require('solapi');
+const { MessageService } = require('solapi');
 
-const messageService = new SolapiMessageService(
+const messageService = new MessageService(
   process.env.SOLAPI_KEY,
   process.env.SOLAPI_SECRET
 );
