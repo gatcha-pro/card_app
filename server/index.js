@@ -20,12 +20,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ 정적 파일 서비스 설정
+// ✅ 정적 파일 경로 설정
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/cards', express.static(path.join(__dirname, '../cards')));
 
-// ✅ Supabase 설정
+// ✅ Supabase 연결
 const supabase = createClient(
   'https://ygruxkqxogcnlgtsrbxs.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlncnV4a3F4b2djbmxndHNyYnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwNDk4MzMsImV4cCI6MjA2MjYyNTgzM30.WtH5W_nIjRi_gs_aGMWl5ehB2TndRVZqDXPqAWb3axw'
@@ -54,7 +54,7 @@ async function generateUniqueDefense() {
   }
 }
 
-// ✅ 카드 이미지 생성
+// ✅ 카드 이미지 생성 함수
 async function generateCard(localPath, attack, defense) {
   const cardTemplate = await Jimp.read('./assets/template.png');
   const photo = await Jimp.read(localPath);
@@ -85,11 +85,13 @@ async function generateCard(localPath, attack, defense) {
   return imagePath;
 }
 
-// ✅ 카드 등록 API
+// ✅ 사용자 업로드 API
 app.post('/upload', upload.single('photo'), async (req, res) => {
   try {
     const phone = req.body.phone;
-    const image_url = req.file.path.replace(/\\/g, '/'); // 윈도우 호환
+    const filename = req.file.filename;
+    const image_url = `uploads/${filename}`; // ✅ 경로 수정 완료
+
     const attack = Math.floor(Math.random() * 100) * 100;
     const defense = await generateUniqueDefense();
 
@@ -102,7 +104,7 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
       return res.status(500).json({ success: false, error: 'DB 저장 실패' });
     }
 
-    await generateCard(image_url, attack, defense);
+    await generateCard(path.join('uploads', filename), attack, defense);
 
     res.json({ success: true, defense });
   } catch (err) {
@@ -111,7 +113,7 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
   }
 });
 
-// ✅ 카드 목록 조회 API
+// ✅ 관리자 카드 목록 API
 app.get('/submissions', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -126,7 +128,7 @@ app.get('/submissions', async (req, res) => {
   }
 });
 
-// ✅ 문자 전송 API
+// ✅ SMS 전송 API
 app.post('/sms', async (req, res) => {
   const { to, msg } = req.body;
   console.log(`📨 [SMS] to: ${to}, msg: ${msg}`);
@@ -134,12 +136,12 @@ app.post('/sms', async (req, res) => {
     const data = await sendSMS(to, msg);
     res.json(data);
   } catch (error) {
-    console.error('❌ SMS 전송 실패:', error);
+    console.error('❌ 문자 전송 실패:', error);
     res.status(500).json({ success: false });
   }
 });
 
-// ✅ 루트 접근 시 index.html 직접 제공 (선택 사항)
+// ✅ 정적 HTML 라우터 (선택 사항)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
