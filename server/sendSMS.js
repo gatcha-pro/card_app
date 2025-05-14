@@ -1,6 +1,7 @@
-import { MessageService } from 'solapi';
+import solapiPkg from 'solapi'; // ✅ CommonJS 패키지를 default import
+const { SolapiMessageService } = solapiPkg; // ✅ 구조 분해
 
-const messageService = new MessageService(
+const messageService = new SolapiMessageService(
   process.env.SOLAPI_KEY,
   process.env.SOLAPI_SECRET
 );
