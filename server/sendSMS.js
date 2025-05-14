@@ -8,7 +8,7 @@ const API_SECRET = process.env.SOLAPI_SECRET;
 const SENDER_PHONE = process.env.SENDER_PHONE;
 
 function getAuthorization() {
-  const timestamp = Date.now().toString();
+  const timestamp = new Date().toISOString(); // ✅ ISO 8601 형식
   const salt = uuidv4();
   const dataToSign = timestamp + salt;
 
@@ -17,7 +17,7 @@ function getAuthorization() {
   const signature = hmac.digest('base64');
 
   const authorization = `HMAC-SHA256 apiKey=${API_KEY}, date=${timestamp}, salt=${salt}, signature=${signature}`;
-  return { authorization, timestamp, salt };
+  return { authorization };
 }
 
 export async function sendSMS(to, msg) {
