@@ -1,12 +1,11 @@
-import pkg from 'solapi'; // ✅ CommonJS → default import
-const { MessageService } = pkg; // ✅ 구조분해로 꺼내기
+const { SolapiMessageService } = require('solapi');
 
-const messageService = new MessageService(
+const messageService = new SolapiMessageService(
   process.env.SOLAPI_KEY,
   process.env.SOLAPI_SECRET
 );
 
-export async function sendSMS(to, msg) {
+async function sendSMS(to, msg) {
   try {
     const res = await messageService.send({
       to,
@@ -21,3 +20,5 @@ export async function sendSMS(to, msg) {
     return { success: false, error: err.response?.data || err.message };
   }
 }
+
+module.exports = { sendSMS };

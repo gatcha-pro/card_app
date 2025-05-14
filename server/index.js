@@ -7,7 +7,7 @@ import Jimp from 'jimp';
 import { PDFDocument } from 'pdf-lib';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
-import { sendSMS } from './sendSMS.js';
+const { sendSMS } = require('./sendSMS');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
