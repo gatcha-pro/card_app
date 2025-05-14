@@ -6,14 +6,17 @@ import { createClient } from '@supabase/supabase-js';
 import Jimp from 'jimp';
 import { PDFDocument } from 'pdf-lib';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
 import { sendSMS } from './sendSMS.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
-app.use(express.static('public'))
-app.use('/cards', express.static('cards'));
-app.use('/uploads', express.static('uploads'))
-
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/cards', express.static(path.join(__dirname, 'cards')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Supabase 연결
 const supabase = createClient(
@@ -21,7 +24,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlncnV4a3F4b2djbmxndHNyYnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwNDk4MzMsImV4cCI6MjA2MjYyNTgzM30.WtH5W_nIjRi_gs_aGMWl5ehB2TndRVZqDXPqAWb3axw',
 );
 
-// ✅ multer 설정: 확장자 유지
 const storage = multer.diskStorage({
   destination: 'uploads/',
   filename: (req, file, cb) => {
@@ -30,7 +32,6 @@ const storage = multer.diskStorage({
     cb(null, name);
   }
 });
-
 const upload = multer({ storage });
 
 app.use(express.json());
@@ -66,11 +67,13 @@ async function generateCard(localPath, attack, defense) {
   return imagePath;
 }
 
-// 유니크 수비력 생성
 async function generateUniqueDefense() {
   while (true) {
     const candidate = Math.floor(Math.random() * 1000);
-    const { data, error } = await supabase.from('submissions').select('defense').eq('defense', candidate);
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('defense')
+      .eq('defense', candidate);
     if (!error && data.length === 0) return candidate;
   }
 }
@@ -89,14 +92,13 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
     console.log('⚔️ 공격력:', attack);
 
     const { error: insertError } = await supabase
-    .from('submissions')
-    .insert([{ phone, attack, defense, image_url }]);
+      .from('submissions')
+      .insert([{ phone, attack, defense, image_url }]);
 
     if (insertError) {
-        console.error('❌ Supabase insert 실패:', insertError);
-        return res.status(500).json({ success: false, error: 'DB 저장 실패' });
+      console.error('❌ Supabase insert 실패:', insertError);
+      return res.status(500).json({ success: false, error: 'DB 저장 실패' });
     }
-
 
     try {
       await generateCard(image_url, attack, defense);
@@ -112,7 +114,6 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
   }
 });
 
-// ✅ 관리자용 카드 리스트 API
 app.get('/submissions', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -127,23 +128,17 @@ app.get('/submissions', async (req, res) => {
   }
 });
 
-// ✅ 문자 전송 API (예: Solapi 연동 시 구현 가능)
 app.post('/sms', async (req, res) => {
   const { to, msg } = req.body;
   console.log(`📨 [SMS] to: ${to}, msg: ${msg}`);
   try {
     const data = await sendSMS(to, msg);
     res.json(data);
-} catch (error) {
+  } catch (error) {
     console.log(error);
     res.sendStatus(500);
   }
 });
 
-// app.get('/uploads', async (req, res) => {
-//     const 
-// });
-
-
-
-app.listen(3000, () => console.log('✅ Server running on http://localhost:3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
