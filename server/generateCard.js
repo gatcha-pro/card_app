@@ -1,9 +1,9 @@
+// generateCard.js
 import Jimp from 'jimp';
 import fs   from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ES 모듈 dirname 설정
 const __filename = fileURLToPath(import.meta.url);
 const dirPath    = path.dirname(__filename);
 
@@ -11,30 +11,35 @@ const dirPath    = path.dirname(__filename);
 let templateBase;
 async function getTemplateBase() {
   if (!templateBase) {
-    templateBase = await Jimp.read(path.join(dirPath, '../assets/template.png'));
+    // 해상도를 낮춰서 메모리 절약
+    templateBase = await Jimp.read(
+      path.join(dirPath, '../assets/template.png')
+    );
+    templateBase.resize(300, 420); // 예시: 300×420px로 축소
   }
   return templateBase;
 }
 
-// 함수 내보내기
 export async function generateCard(localPath, attack, defense) {
   const base     = await getTemplateBase();
   const template = base.clone();
 
   const photo = await Jimp.read(localPath);
-  photo.resize(260, 260);
+  photo.resize(200, 200);  // 축소
 
-  const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
-  template.composite(photo, 90, 120)
-          .print(font, 60, 400,  `공격력: ${attack}`)
-          .print(font, 260, 400, `수비력: ${defense}`);
+  const font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
+  template.composite(photo, 50, 60)
+          .print(font, 20, 300,  `공격력: ${attack}`)
+          .print(font, 160, 300, `수비력: ${defense}`);
 
   const imagePath = path.join(dirPath, '../cards', `${defense}.png`);
   await template.writeAsync(imagePath);
 
-  // 참조 해제
+  // 명시적 해제
   photo.bitmap = null;
   photo._originalMime = null;
+  template.bitmap = null;
+  template._originalMime = null;
 
   return imagePath;
 }
