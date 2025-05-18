@@ -50,7 +50,7 @@
       data.forEach(entry => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td><img src="/${entry.image_url}" alt="카드" /></td>
+          <td><img src="${entry.image_url}" alt="카드" /></td>
           <td>${entry.phone}</td>
           <td>${entry.defense ?? 'null'}</td>
           <td>
