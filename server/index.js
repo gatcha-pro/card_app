@@ -91,7 +91,7 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
       if (insertError) throw insertError;
   
       // ──❸ 합성 카드는 따로 만들고 저장만 (DB에는 저장하지 않음)
-      await generateCard(path.join(__dirname, '../uploads', filename), attack, defense);
+      await generateCard(path.join(dirPath, '../uploads', filename), attack, defense);
   
       return res.json({ success: true, defense });
     } catch (err) {
