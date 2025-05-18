@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { generateCard } from './generateCard.js';
+
 import Jimp from 'jimp';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
