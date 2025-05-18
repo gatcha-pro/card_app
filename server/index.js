@@ -4,46 +4,45 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import { generateCard } from './generateCard.js';
-
 import Jimp from 'jimp';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { sendSMS } from './sendSMS.js';
 import dotenv from 'dotenv';
+import { generateCard } from './generateCard.js';
+
 dotenv.config();
-// ─ ES 모듈에서 __dirname 사용 설정 ─
+
+// ES 모듈에서 __dirname 사용 설정
 const __filename = fileURLToPath(import.meta.url);
 const dirPath    = path.dirname(__filename);
 
-// ─ templateConfig.json 로드 ─
+// 템플릿 설정 파일 로드
 const configPath = path.join(dirPath, 'templateConfig.json');
 const configRaw  = fs.readFileSync(configPath, 'utf-8');
 const config     = JSON.parse(configRaw);
 
-// ─ Express 앱 설정 ─
+// Express 앱 초기화
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ─ 미들웨어 ─
+// 미들웨어
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ─ 정적 파일 라우팅 ─
+// 정적 파일 라우팅
 app.use(express.static(path.join(dirPath, '../public')));
 app.use('/uploads', express.static(path.join(dirPath, '../uploads')));
 app.use('/cards',   express.static(path.join(dirPath, '../cards')));
 
-// ─ Supabase 클라이언트 ─
+// Supabase 클라이언트 (서비스 롤 키)
 const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-  
-  
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-// ─ Multer 설정 ─
+// Multer 설정 (최대 5MB)
 const storage = multer.diskStorage({
   destination: path.join(dirPath, '../uploads'),
   filename: (req, file, cb) => {
@@ -52,9 +51,9 @@ const storage = multer.diskStorage({
     cb(null, name);
   }
 });
-const upload = multer({ storage });
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-// ─ 유니크 수비력 생성 함수 ─
+// 유니크 수비력 생성
 async function generateUniqueDefense() {
   while (true) {
     const candidate = Math.floor(Math.random() * 1000);
@@ -66,41 +65,34 @@ async function generateUniqueDefense() {
   }
 }
 
-// ─ 업로드 핸들러 ─
+// 업로드 핸들러
 app.post('/upload', upload.single('photo'), async (req, res) => {
-    try {
-      const phone    = req.body.phone;
-      const filename = req.file.filename;
-      // ──❶ 원본 업로드 사진 경로 생성
-      // 앞에 슬래시 하나만 붙이면, 정적 미들웨어(/uploads)와도 잘 매핑됩니다.
-      const photoUrl = `/uploads/${filename}`;
-  
-      // 공격·수비값 계산
-      const attack  = Math.floor(Math.random() * 100) * 100;
-      const defense = await generateUniqueDefense();
-  
-      // ──❷ submissions 테이블에 INSERT
-      const { error: insertError } = await supabase
-        .from('submissions')
-        .insert([{
-          phone,
-          attack,
-          defense,
-          image_url: photoUrl    // <-- composite URL 대신, 여기에 photoUrl을 넣어 주세요
-        }]);
-      if (insertError) throw insertError;
-  
-      // ──❸ 합성 카드는 따로 만들고 저장만 (DB에는 저장하지 않음)
-      await generateCard(path.join(dirPath, '../uploads', filename), attack, defense);
-  
-      return res.json({ success: true, defense });
-    } catch (err) {
-      console.error('❌ 업로드 실패:', err);
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  });
-  
-// ─ submissions 목록 조회 ─
+  try {
+    const phone    = req.body.phone;
+    const filename = req.file.filename;
+    // 원본 사진 URL
+    const photoUrl = `/uploads/${filename}`;
+
+    const attack  = Math.floor(Math.random() * 100) * 100;
+    const defense = await generateUniqueDefense();
+
+    // DB 저장 (원본 사진 URL)
+    const { error: insertError } = await supabase
+      .from('submissions')
+      .insert([{ phone, attack, defense, image_url: photoUrl }]);
+    if (insertError) throw insertError;
+
+    // 합성 카드 로컬 저장 (DB 미저장)
+    await generateCard(path.join(dirPath, '../uploads', filename), attack, defense);
+
+    return res.json({ success: true, defense });
+  } catch (err) {
+    console.error('❌ 업로드 실패:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// submissions 목록 조회
 app.get('/submissions', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -115,7 +107,7 @@ app.get('/submissions', async (req, res) => {
   }
 });
 
-// ─ SMS 전송 ─
+// SMS 전송 API
 app.post('/sms', async (req, res) => {
   const { to, msg } = req.body;
   console.log(`📨 [SMS] to: ${to}, msg: ${msg}`);
@@ -128,15 +120,11 @@ app.post('/sms', async (req, res) => {
   }
 });
 
-// ─ 정적 HTML 라우팅 ─
-app.get('/', (req, res) => {
-  res.sendFile(path.join(dirPath, '../public/index.html'));
-});
-app.get('/admin.html', (req, res) => {
-  res.sendFile(path.join(dirPath, '../public/admin.html'));
-});
+// 정적 HTML 라우팅
+app.get('/',      (req, res) => res.sendFile(path.join(dirPath, '../public/index.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(dirPath, '../public/admin.html')));
 
-// ─ 카드 삭제 ─
+// 카드 삭제 API
 app.delete('/submissions/:defense', async (req, res) => {
   const defense = parseInt(req.params.defense, 10);
   try {
@@ -152,7 +140,7 @@ app.delete('/submissions/:defense', async (req, res) => {
   }
 });
 
-// ─ 서버 시작 ─
+// 서버 시작
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
