@@ -8,7 +8,8 @@ import Jimp from 'jimp';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { sendSMS } from './sendSMS.js';
-
+import dotenv from 'dotenv';
+dotenv.config();
 // ─ ES 모듈에서 __dirname 사용 설정 ─
 const __filename = fileURLToPath(import.meta.url);
 const dirPath    = path.dirname(__filename);
@@ -34,9 +35,11 @@ app.use('/cards',   express.static(path.join(dirPath, '../cards')));
 
 // ─ Supabase 클라이언트 ─
 const supabase = createClient(
-  'https://ygruxkqxogcnlgtsrbxs.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlncnV4a3F4b2djbmxndHNyYnhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwNDk4MzMsImV4cCI6MjA2MjYyNTgzM30.WtH5W_nIjRi_gs_aGMWl5ehB2TndRVZqDXPqAWb3axw'
-);
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+  
+  
 
 // ─ Multer 설정 ─
 const storage = multer.diskStorage({
