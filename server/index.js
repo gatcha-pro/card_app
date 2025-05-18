@@ -66,73 +66,38 @@ async function generateUniqueDefense() {
 
 // ─ 업로드 핸들러 ─
 app.post('/upload', upload.single('photo'), async (req, res) => {
-  try {
-    // 1) 흰색 캔버스 생성
-    const template = new Jimp(
-      config.canvas.width,
-      config.canvas.height,
-      0xffffffff
-    );
-
-    // 2) 사용자 사진 로드 & 리사이즈
-    const photo = await Jimp.read(req.file.path);
-    photo.resize(config.photo.w, config.photo.h);
-
-    // 3) 캔버스에 사진 합성
-    template.composite(photo, config.photo.x, config.photo.y);
-
-    // 4) 폰트 로드
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
-
-    // 5) 공격·수비값 계산
-    const attackValue  = Math.floor(Math.random() * 100) * 100;
-    const defenseValue = await generateUniqueDefense();
-
-    // 6) 사용자 메시지 (옵션)
-    const message = req.body.message || '';
-
-    // 7) 텍스트 출력
-    template.print(font, config.attack.x,  config.attack.y,  `공격력: ${attackValue}`);
-    template.print(font, config.defense.x, config.defense.y, `수비력: ${defenseValue}`);
-    template.print(font, config.msgAtt.x,  config.msgAtt.y,   message);
-    template.print(font, config.msgDef.x,  config.msgDef.y,   message);
-
-    // 8) PNG 버퍼로 변환
-    const buffer = await template.getBufferAsync(Jimp.MIME_PNG);
-
-    // 9) Supabase 스토리지에 업로드
-    const { data, error: uploadError } = await supabase
-      .storage
-      .from('cards')
-      .upload(`card-${uuidv4()}.png`, buffer, { contentType: 'image/png' });
-    if (uploadError) throw uploadError;
-
-    // 10) public URL 가져오기
-    const url = supabase
-      .storage
-      .from('cards')
-      .getPublicUrl(data.path)
-      .publicURL;
-
-    // 11) submissions 테이블에 저장
-    const { error: dbError } = await supabase
-      .from('submissions')
-      .insert([{ 
-        phone:      req.body.phone,
-        attack:     attackValue,
-        defense:    defenseValue,
-        image_url:  url
-      }]);
-    if (dbError) throw dbError;
-
-    // 12) 응답
-    res.json({ success: true, imageUrl: url, attack: attackValue, defense: defenseValue });
-  } catch (err) {
-    console.error('❌ 업로드 실패:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
+    try {
+      const phone    = req.body.phone;
+      const filename = req.file.filename;
+      // ──❶ 원본 업로드 사진 경로 생성
+      // 앞에 슬래시 하나만 붙이면, 정적 미들웨어(/uploads)와도 잘 매핑됩니다.
+      const photoUrl = `/uploads/${filename}`;
+  
+      // 공격·수비값 계산
+      const attack  = Math.floor(Math.random() * 100) * 100;
+      const defense = await generateUniqueDefense();
+  
+      // ──❷ submissions 테이블에 INSERT
+      const { error: insertError } = await supabase
+        .from('submissions')
+        .insert([{
+          phone,
+          attack,
+          defense,
+          image_url: photoUrl    // <-- composite URL 대신, 여기에 photoUrl을 넣어 주세요
+        }]);
+      if (insertError) throw insertError;
+  
+      // ──❸ 합성 카드는 따로 만들고 저장만 (DB에는 저장하지 않음)
+      await generateCard(path.join(__dirname, '../uploads', filename), attack, defense);
+  
+      return res.json({ success: true, defense });
+    } catch (err) {
+      console.error('❌ 업로드 실패:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+  
 // ─ submissions 목록 조회 ─
 app.get('/submissions', async (req, res) => {
   try {
