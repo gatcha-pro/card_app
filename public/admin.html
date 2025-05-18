@@ -2,21 +2,16 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리자 페이지 - 카드 리스트</title>
+  <title>관리자 페이지 - 카드 목록</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input { margin-bottom: 10px; padding: 6px; width: 200px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    img { max-width: 100px; }
-    button { margin: 2px; padding: 5px 10px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:center; }
+    img { max-width:100px; }
   </style>
 </head>
 <body>
-  <h1>🛡️ 사용자 카드 목록</h1>
-
-  <input type="text" id="searchInput" placeholder="수비력으로 검색..." />
-
+  <h1>🛡️ 카드 목록</h1>
+  <input id="search" placeholder="수비력 검색" />
   <table>
     <thead>
       <tr>
@@ -26,93 +21,46 @@
         <th>관리</th>
       </tr>
     </thead>
-    <tbody id="dataTable"></tbody>
+    <tbody id="tbody"></tbody>
   </table>
 
   <script>
-    let allData = [];
-
-    async function loadSubmissions() {
-      try {
-        const res = await fetch('/submissions');
-        const data = await res.json();
-        allData = data;
-        renderTable(allData);
-      } catch (err) {
-        console.error('❌ submissions 로딩 실패:', err);
-        alert('서버에서 데이터를 불러오지 못했습니다.');
-      }
+    let data = [];
+    async function load() {
+      const res = await fetch('/submissions');
+      data = await res.json();
+      render(data);
     }
-
-    function renderTable(data) {
-      const table = document.getElementById('dataTable');
-      table.innerHTML = '';
-      data.forEach(entry => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td><img src="${entry.image_url}" alt="카드" /></td>
-          <td>${entry.phone}</td>
-          <td>${entry.defense ?? 'null'}</td>
+    function render(list) {
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><img src="${item.image_url}" /></td>
+          <td>${item.phone}</td>
+          <td>${item.defense}</td>
           <td>
-            <button onclick="sendSMS('${entry.phone}')">전송</button>
-            <button onclick="deleteEntry(${entry.defense})">삭제</button>
+            <button onclick="sendSMS('${item.phone}')">전송</button>
+            <button onclick="del(${item.defense})">삭제</button>
           </td>
         `;
-        table.appendChild(row);
+        tbody.appendChild(tr);
       });
     }
-
-    async function sendSMS(phone) {
-      const msg = prompt(`${phone} 번에게 보낼 메시지 입력:`);
-      if (!msg) return;
-
-      try {
-        const res = await fetch('/sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: phone, msg })
-        });
-
-        const result = await res.json();
-        if (result.success) alert('✅ 전송 성공');
-        else alert('❌ 전송 실패');
-      } catch (err) {
-        alert('전송 요청 실패');
-        console.error(err);
-      }
+    async function sendSMS(to) {
+      await fetch('/sms', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({to,msg:'카드 발송 완료'})});
+      alert('문자 전송');
     }
-
-    async function deleteEntry(defense) {
-      if (!confirm(`${defense}번 카드를 삭제할까요?`)) return;
-
-      try {
-        const res = await fetch(`/submissions/${defense}`, {
-          method: 'DELETE'
-        });
-        const result = await res.json();
-        if (result.success) {
-          alert('✅ 삭제 완료');
-          loadSubmissions();
-        } else {
-          alert('❌ 삭제 실패');
-        }
-      } catch (err) {
-        alert('삭제 요청 실패');
-        console.error(err);
-      }
+    async function del(def) {
+      await fetch(`/submissions/${def}`, { method:'DELETE' });
+      load();
     }
-
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      const keyword = e.target.value.trim();
-      const filtered = keyword === ''
-        ? allData
-        : allData.filter(entry =>
-            entry.defense?.toString().includes(keyword)
-          );
-      renderTable(filtered);
+    document.getElementById('search').addEventListener('input', e => {
+      const kw = e.target.value;
+      render(kw ? data.filter(x=>x.defense.toString().includes(kw)) : data);
     });
-
-    window.onload = loadSubmissions;
+    window.onload = load;
   </script>
 </body>
 </html>
