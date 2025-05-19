@@ -2,37 +2,60 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>카드 업로드</title>
+  <title>사진 카드 등록</title>
 </head>
 <body>
-  <h1>🖼️ 우연이 만든 우리</h1>
-  <h2>사진을 업로드하세요.</h2>
-  <form id="uploadForm">
-    <input type="file" name="photo" accept="image/*" required />
-    <input type="text" name="phone" placeholder="전화번호" required />
-    <button type="submit">업로드</button>
+  <h1>우연이 만든 우리</h1>
+  <h2>사진과 전화번호를 입력하세요.</h2>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="photo" id="photoInput" accept="image/*" required /><br>
+    <img id="preview" style="display:none; max-width:200px;" /><br>
+    <input type="tel" name="phone" id="phoneInput" placeholder="예:01012345678" required /><br>
+    <button type="submit">등록</button>
   </form>
 
-  <div id="result" style="display:none; margin-top:20px;">
-    <h2>결과</h2>
-    <p>공격력: <span id="attack"></span></p>
-    <p>수비력: <span id="defense"></span></p>
-    <img id="preview" style="max-width:300px;" />
-  </div>
-
   <script>
-    const form = document.getElementById('uploadForm');
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const data = new FormData(form);
-      const res  = await fetch('/upload', { method: 'POST', body: data });
-      const json = await res.json();
-      if (!json.success) return alert('실패: ' + json.error);
+    const photoInput = document.getElementById('photoInput');
+    const preview = document.getElementById('preview');
+    const uploadForm = document.getElementById('uploadForm');
+    const phoneInput = document.getElementById('phoneInput');
 
-      document.getElementById('attack').textContent  = json.attack;
-      document.getElementById('defense').textContent = json.defense;
-      document.getElementById('preview').src         = json.image_url;
-      document.getElementById('result').style.display = 'block';
+    photoInput.addEventListener('change', () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(uploadForm);
+
+      try {
+        const res = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          alert(`등록 완료! 수비력: ${result.defense}`);
+          photoInput.value = "";
+          phoneInput.value = "";
+          preview.src = "";
+          preview.style.display = "none";
+        } else {
+          alert('업로드 실패: ' + result.error);
+        }
+      } catch (err) {
+        alert('서버 연결 실패');
+        console.error(err);
+      }
     });
   </script>
 </body>
