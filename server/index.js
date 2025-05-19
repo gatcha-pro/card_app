@@ -66,7 +66,7 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
     if (uploadErr) throw uploadErr;
 
     // 2) public URL 생성
-    const { publicURL, error: urlErr } = supabase
+    const { data: { publicUrl }, error: urlErr } = supabase
       .storage
       .from('uploads')
       .getPublicUrl(uploadData.path);
@@ -79,10 +79,10 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
     // 4) DB 저장 (원본 Supabase URL)
     const { error: dbErr } = await supabase
       .from('submissions')
-      .insert([{ phone, attack, defense, image_url: publicURL }]);
+      .insert([{ phone, attack, defense, image_url: publicUrl }]);
     if (dbErr) throw dbErr;
 
-    return res.json({ success: true, attack, defense, image_url: publicURL });
+    return res.json({ success: true, attack, defense, image_url: publicUrl });
   } catch (err) {
     console.error('❌ 업로드 실패:', err);
     return res.status(500).json({ success: false, error: err.message });
@@ -117,7 +117,7 @@ app.post('/sms', async (req, res) => {
 });
 
 // 정적 HTML 라우팅
-app.get('/',        (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, '../public/admin.html')));
 
 // 카드 삭제 API
