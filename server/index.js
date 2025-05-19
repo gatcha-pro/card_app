@@ -30,10 +30,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Multer 메모리 저장소 설정
+// Multer 메모리 저장소 및 파일 사이즈 제한 설정 (최대 10MB)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 } // 최대 5MB
+  limits: { fileSize: 10 * 1024 * 1024 } // 최대 10MB
+});
+
+// Multer 에러 처리 미들웨어
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ success: false, error: '파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.' });
+    }
+    return res.status(400).json({ success: false, error: err.message });
+  }
+  next(err);
 });
 
 // 유니크 수비력 생성 함수
@@ -55,7 +66,7 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
     const ext   = path.extname(req.file.originalname);
     const key   = `${Date.now()}${ext}`;
 
-    // 1) 파일을 Supabase Storage 'uploads' 버킷에 업로드
+    // Supabase Storage 'uploads' 버킷에 업로드
     const { data: uploadData, error: uploadErr } = await supabase
       .storage
       .from('uploads')
@@ -65,18 +76,18 @@ app.post('/upload', upload.single('photo'), async (req, res) => {
       });
     if (uploadErr) throw uploadErr;
 
-    // 2) public URL 생성
+    // public URL 생성
     const { data: { publicUrl }, error: urlErr } = supabase
       .storage
       .from('uploads')
       .getPublicUrl(uploadData.path);
     if (urlErr) throw urlErr;
 
-    // 3) 공격·수비값 계산
+    // 공격·수비값 계산
     const attack  = Math.floor(Math.random() * 100) * 100;
     const defense = await generateUniqueDefense();
 
-    // 4) DB 저장 (원본 Supabase URL)
+    // DB 저장
     const { error: dbErr } = await supabase
       .from('submissions')
       .insert([{ phone, attack, defense, image_url: publicUrl }]);
