@@ -106,7 +106,7 @@ app.get('/submissions', async (req, res) => {
     const { data, error } = await supabase
       .from('submissions')
       .select()
-      .order('id', { ascending: false });
+      .order('created_at', { ascending: false });
     if (error) throw error;
     res.json(data);
   } catch (err) {
